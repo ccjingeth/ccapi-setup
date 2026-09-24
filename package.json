@@ -41,7 +41,8 @@
         "AppImage",
         "deb"
       ],
-      "category": "Network"
+      "category": "Network",
+      "maintainer": "ccjingeth@users.noreply.github.com"
     },
     "publish": [
       {
@@ -54,5 +55,9 @@
       "allowToChangeInstallationDirectory": true
     }
   },
-  "author": "CCAPI"
+  "author": {
+    "name": "CCAPI",
+    "email": "ccjingeth@users.noreply.github.com"
+  },
+  "homepage": "https://github.com/ccjingeth/ccapi-setup"
 }
