@@ -1,45 +1,15 @@
-const { app, BrowserWindow, ipcMain, safeStorage, shell } = require('electron');
-const path = require('node:path');
-const fs = require('node:fs/promises');
-const os = require('node:os');
-
-const API_BASE = 'https://api-direct.ccapi.us/v1';
-const CONFIG_ROOT = path.join(app.getPath('userData'), 'profiles');
-
-function createWindow() {
-  const win = new BrowserWindow({ width: 1180, height: 820, minWidth: 980, minHeight: 680, title: 'CCAPI Setup', webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false } });
-  win.loadFile(path.join(__dirname, 'index.html'));
-}
-async function safeFetch(url, options = {}) {
-  const controller = new AbortController(); const timer = setTimeout(() => controller.abort(), 15000);
-  try { return await fetch(url, { ...options, signal: controller.signal }); } finally { clearTimeout(timer); }
-}
-ipcMain.handle('api-test', async (_, { token, kind = 'models', model, prompt }) => {
-  if (!token || typeof token !== 'string') return { ok: false, message: '请输入 API Key' };
-  const headers = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
-  try {
-    let res;
-    if (kind === 'models') res = await safeFetch(`${API_BASE}/models`, { headers });
-    else if (kind === 'chat') res = await safeFetch(`${API_BASE}/chat/completions`, { method: 'POST', headers, body: JSON.stringify({ model, messages: [{ role: 'user', content: prompt || '请回复：配置成功' }], max_tokens: 20 }) });
-    else if (kind === 'image') res = await safeFetch(`${API_BASE}/images/generations`, { method: 'POST', headers, body: JSON.stringify({ model, prompt: prompt || '一朵白色雏菊，简洁插画', size: '1024x1024' }) });
-    else if (kind === 'video') res = await safeFetch(`${API_BASE}/videos`, { method: 'POST', headers, body: JSON.stringify({ model, prompt: prompt || '静态镜头，清晨光线中的白色纸船', duration: 4, resolution: '768p', aspect_ratio: '16:9' }) });
-    const text = await res.text(); let data; try { data = JSON.parse(text); } catch { data = {}; }
-    return { ok: res.ok, status: res.status, data, message: res.ok ? '连接成功' : (data?.error?.message || `请求失败（HTTP ${res.status}）`) };
-  } catch (e) { return { ok: false, message: e.name === 'AbortError' ? '请求超时，请检查网络' : '连接失败，请检查网络或 API 地址' }; }
-});
-ipcMain.handle('save-token', async (_, token) => {
-  if (!safeStorage.isEncryptionAvailable()) return { ok: false, message: '系统密钥存储不可用' };
-  await fs.mkdir(CONFIG_ROOT, { recursive: true });
-  await fs.writeFile(path.join(CONFIG_ROOT, 'api-key.bin'), safeStorage.encryptString(token));
-  return { ok: true };
-});
-ipcMain.handle('get-token', async () => { try { return safeStorage.decryptString(await fs.readFile(path.join(CONFIG_ROOT, 'api-key.bin'))); } catch { return ''; } });
-ipcMain.handle('open-url', (_, url) => shell.openExternal(url));
-ipcMain.handle('export-config', async (_, { format, tool, token, model }) => {
-  const payload = { baseURL: API_BASE, apiKey: token || 'YOUR_API_KEY', model: model || 'gpt-6-sol' };
-  const content = format === 'env' ? `OPENAI_BASE_URL=${API_BASE}\nOPENAI_API_KEY=${payload.apiKey}\nOPENAI_MODEL=${payload.model}\n` : JSON.stringify(payload, null, 2);
-  const file = path.join(app.getPath('downloads'), `ccapi-${tool || 'config'}.${format === 'env' ? 'env' : 'json'}`);
-  await fs.writeFile(file, content, { mode: 0o600 }); return file;
-});
-app.whenReady().then(() => { createWindow(); app.on('activate', () => { if (!BrowserWindow.getAllWindows().length) createWindow(); }); });
-app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
+const {app,BrowserWindow,ipcMain,safeStorage,shell,dialog}=require('electron');
+const path=require('node:path');const fs=require('node:fs/promises');const fsSync=require('node:fs');
+const adapters=require('./adapters');
+const API_BASE='https://api-direct.ccapi.us/v1';const CONFIG_ROOT=path.join(app.getPath('userData'),'profiles');
+function createWindow(){const w=new BrowserWindow({width:1180,height:820,minWidth:980,minHeight:680,title:'CCAPI Setup',webPreferences:{preload:path.join(__dirname,'preload.js'),contextIsolation:true,nodeIntegration:false}});w.loadFile(path.join(__dirname,'index.html'));}
+async function safeFetch(url,o={}){const c=new AbortController(),t=setTimeout(()=>c.abort(),15000);try{return await fetch(url,{...o,signal:c.signal})}finally{clearTimeout(t)}}
+async function response(r){const text=await r.text();let data={};try{data=JSON.parse(text)}catch{}return {ok:r.ok,status:r.status,data,message:r.ok?'连接成功':data?.error?.message||`请求失败（HTTP ${r.status}）`}}
+ipcMain.handle('api-test',async(_,x={})=>{if(!x.token)return{ok:false,message:'请输入 API Key'};const h={Authorization:`Bearer ${x.token}`,'Content-Type':'application/json'};try{let r;if(x.kind==='models')r=await safeFetch(`${API_BASE}/models`,{headers:h});else if(x.kind==='chat')r=await safeFetch(`${API_BASE}/chat/completions`,{method:'POST',headers:h,body:JSON.stringify({model:x.model,messages:[{role:'user',content:x.prompt||'请回复：配置成功'}],max_tokens:20})});else if(x.kind==='image')r=await safeFetch(`${API_BASE}/images/generations`,{method:'POST',headers:h,body:JSON.stringify({model:x.model,prompt:x.prompt||'一朵白色雏菊，简洁插画',size:'1024x1024'})});else r=await safeFetch(`${API_BASE}/videos`,{method:'POST',headers:h,body:JSON.stringify({model:x.model,prompt:x.prompt||'静态镜头，清晨光线中的白色纸船',duration:4,resolution:x.model?.includes('MiniMax')?'768p':'480p',aspect_ratio:'16:9'})});return response(r)}catch(e){return{ok:false,message:e.name==='AbortError'?'请求超时，请检查网络':'连接失败，请检查网络或 API 地址'}}});
+ipcMain.handle('save-token',async(_,token)=>{if(!safeStorage.isEncryptionAvailable())return{ok:false,message:'系统密钥存储不可用'};await fs.mkdir(CONFIG_ROOT,{recursive:true});await fs.writeFile(path.join(CONFIG_ROOT,'api-key.bin'),safeStorage.encryptString(token),{mode:0o600});return{ok:true}});
+ipcMain.handle('get-token',async()=>{try{return safeStorage.decryptString(await fs.readFile(path.join(CONFIG_ROOT,'api-key.bin')))}catch{return''}});
+ipcMain.handle('scan-tools',async()=>{const out=[];for(const a of adapters){const found=a.paths.filter(x=>fsSync.existsSync(x));out.push({id:a.id,name:a.name,detected:found.length>0,paths:found})}return out});
+function backupName(file){return `${file}.ccapi-backup-${new Date().toISOString().replace(/[:.]/g,'-')}`}
+ipcMain.handle('apply-config',async(_,x)=>{const a=adapters.find(z=>z.id===x.tool);if(!a)return{ok:false,message:'未找到适配器'};const candidates=a.paths.filter(p=>fsSync.existsSync(p));if(!candidates.length)return{ok:false,message:'未检测到配置文件，请使用导出配置'};const file=candidates[0];try{const raw=await fs.readFile(file,'utf8');let current={};if(a.format==='json')current=JSON.parse(raw);const next=a.patch(current,{baseURL:API_BASE,apiKey:x.token,model:x.model});const backup=backupName(file);await fs.copyFile(file,backup);const tmp=`${file}.ccapi-tmp-${process.pid}`;await fs.writeFile(tmp,typeof next==='string'?next:JSON.stringify(next,null,2)+'\n',{mode:0o600});await fs.rename(tmp,file);return{ok:true,file,backup}}catch(e){return{ok:false,message:`配置未写入：${e.message}`}}});
+ipcMain.handle('export-config',async(_,x)=>{const a=adapters.find(z=>z.id===x.tool)||adapters.at(-1);const out=path.join(app.getPath('downloads'),`ccapi-${x.tool||'config'}.${a.format==='env'?'env':a.format}`);const content=a.patch({}, {baseURL:API_BASE,apiKey:x.token||'YOUR_API_KEY',model:x.model||'gpt-6-sol'});await fs.writeFile(out,typeof content==='string'?content:JSON.stringify(content,null,2)+'\n',{mode:0o600});return out});
+ipcMain.handle('open-url',(_,u)=>shell.openExternal(u));app.whenReady().then(()=>{createWindow();app.on('activate',()=>{if(!BrowserWindow.getAllWindows().length)createWindow()})});app.on('window-all-closed',()=>{if(process.platform!=='darwin')app.quit()});
