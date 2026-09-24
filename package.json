@@ -1,0 +1,25 @@
+{
+  "name": "ccapi-setup",
+  "version": "0.1.0",
+  "private": true,
+  "description": "CCAPI 小白 AI 工具一键配置助手",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --mac --win --linux",
+    "pack": "electron-builder --dir"
+  },
+  "devDependencies": {
+    "electron": "^36.3.2",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "us.ccapi.setup",
+    "productName": "CCAPI Setup",
+    "directories": { "output": "dist" },
+    "files": ["src/**/*", "adapters/**/*"],
+    "mac": { "category": "public.app-category.utilities", "target": ["dmg", "zip"] },
+    "win": { "target": ["nsis", "zip"] },
+    "linux": { "target": ["AppImage", "deb"] }
+  }
+}

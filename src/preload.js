@@ -1,0 +1,2 @@
+const { contextBridge, ipcRenderer } = require('electron');
+contextBridge.exposeInMainWorld('ccapi', { apiBase: 'https://api-direct.ccapi.us/v1', test: (data) => ipcRenderer.invoke('api-test', data), saveToken: (token) => ipcRenderer.invoke('save-token', token), getToken: () => ipcRenderer.invoke('get-token'), exportConfig: (data) => ipcRenderer.invoke('export-config', data), openUrl: (url) => ipcRenderer.invoke('open-url', url) });
