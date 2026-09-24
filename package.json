@@ -1,6 +1,6 @@
 {
   "name": "ccapi-setup",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "description": "CCAPI 小白 AI 工具一键配置助手",
   "main": "src/main.js",
@@ -16,10 +16,43 @@
   "build": {
     "appId": "us.ccapi.setup",
     "productName": "CCAPI Setup",
-    "directories": { "output": "dist" },
-    "files": ["src/**/*", "adapters/**/*"],
-    "mac": { "category": "public.app-category.utilities", "target": ["dmg", "zip"] },
-    "win": { "target": ["nsis", "zip"] },
-    "linux": { "target": ["AppImage", "deb"] }
-  }
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "src/**/*",
+      "adapters/**/*"
+    ],
+    "mac": {
+      "category": "public.app-category.utilities",
+      "target": [
+        "dmg",
+        "zip"
+      ]
+    },
+    "win": {
+      "target": [
+        "nsis",
+        "zip"
+      ]
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "category": "Network"
+    },
+    "publish": [
+      {
+        "provider": "generic",
+        "url": "https://api-direct.ccapi.us/setup-updates/"
+      }
+    ],
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  },
+  "author": "CCAPI"
 }
